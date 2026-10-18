@@ -11,11 +11,16 @@ class MLP:
         self.__finished_settings = False                                # Флаг окончания настройки модели
         self.__types_activations = ["Identity", "Sigmoid", "ReLU"]      # Доступные активации
         self.__dict_activations = {
-            "Identity": self.identity,
-            "Sigmoid": self.sigmoid,
-            "ReLU": self.ReLU
+            "Identity": [self.identity, self.__identity_derivatiev],
+            "Sigmoid": [self.sigmoid, self.__sigmoid_derivatiev],
+            "ReLU": [self.ReLU, self.__ReLU_derivatiev]
         }
         self.__weights_array = list()                                   # Веса модели
+        self.__dict_of_loss = {
+            "MSE": [self.MSE]
+        }
+        self.__representations = list()                                 # Сохраненные представления модели
+        self.train_mode = True                                          # Режим обучения/теста модели
 
     def set_layer(self, neuron_counts, activation_func):                # Задание слоя модели
         if activation_func in self.__types_activations:
@@ -62,14 +67,19 @@ class MLP:
             result = x
             for i in range(self.__layers):
                 w = self.__weights_array[i]
-                activate_func = self.__dict_activations[self.__activations[i]]
+                activate_func = self.__dict_activations[self.__activations[i]][0]
                 result = self.__dot_product(result, w, activate_func)
+                if self.train_mode == True:
+                    self.__representations.append(result)
+        else:
+            result = None
+            raise Exception("Model is not set! Set up a neural network!")
         return result
 
     def __dot_product(self, x, w, activate_func):                       # Перемноежение матрицы признаков на матрицу весов и применение функции активации
         return activate_func(np.dot(x, w))
 
-    # Activation functions
+    # Функции активации
     def identity(self, x):
         return x
 
@@ -82,3 +92,40 @@ class MLP:
         from math import e
         result = 1 / (1 + e ** (-x))
         return result
+
+    # Производные функций активации
+    def __identity_derivatiev(self, x):
+        return np.ones_like(x)
+
+    def __sigmoid_derivatiev(self, x):
+        from math import e
+        result = (e ** x) / (e ** (2 * x) + 2 * (e ** x) + 1)
+        return result
+
+    def __ReLU_derivatiev(self, x):
+        negative_mask =  x <= 0
+        positive_mask = x > 0
+        x[negative_mask] = 0
+        x[positive_mask] = 1
+        return x
+
+    # Функции потерь и их градиенты
+    def MSE(self, y_true, y_pred):                                  # MSE 
+        n = len(y_true)
+        temp = (y_true - y_pred) ** 2
+        return sum(temp) / n
+
+    def __MSE_derivatiev(self, representation, y_true, y_pred):
+        x = representation
+        n = len(y_true)
+        result = -2 / n * np.dot(x.T, (y_true - y_pred))
+        # print(f"x.T: {x.T}")
+        # print(f"y_true - y_pred:\n{y_true - y_pred}")
+        # print("Градиент:")
+        return result
+
+    def test(self, y_true, y_pred):
+        representation = self.__representations[len(self.__representations)-2]     # вход последнего слоя
+        # print(representation)
+        # print(self.__MSE_derivatiev(representation, y_true, y_pred))
+        return self.__MSE_derivatiev(representation, y_true, y_pred)
