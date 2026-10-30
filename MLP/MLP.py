@@ -18,7 +18,7 @@ class MLP:
         }
         self.__weights_array = list()                                   # Веса модели
         self.__loss_fn = None
-        self.__types_loss = ["MSE", "CrossEntropy"]
+        self.__types_loss = ["MSE", "CrossEntropy"]                     # Доступные функции потерь
         self.__dict_of_loss = {
             "MSE": [self.MSE, self.__MSE_derivatiev],
             "CrossEntropy": [self.Cross_entropy, self.Cross_entropy_derivatiev]
@@ -58,10 +58,10 @@ class MLP:
         self.__weights_array.append(first_weight)
 
         for i in range(1, self.__layers):
-            weight = np.random.rand(self.__neuron_counts[i-1], self.__neuron_counts[i])
+            weight = np.random.randn(self.__neuron_counts[i-1], self.__neuron_counts[i])
             self.__weights_array.append(weight)
 
-    def get_weights(self, layer_number):                        ######## слои должны быть с 1 до n
+    def get_weights(self, layer_number):                        # Вывод значений весов для некторого (layer_number) слоя
         if (-1 < layer_number) and (layer_number < self.__layers):
             return self.__weights_array[layer_number]
         else:
@@ -90,9 +90,10 @@ class MLP:
         return x
 
     def ReLU(self, x):
-        mask = x <= 0
-        x[mask] = 0
-        return x
+        result = np.copy(x)
+        mask = result <= 0
+        result[mask] = 0
+        return result
 
     def sigmoid(self, x):
         from math import e
@@ -123,11 +124,12 @@ class MLP:
         return result
 
     def __ReLU_derivatiev(self, x):
-        negative_mask =  x <= 0
-        positive_mask = x > 0
-        x[negative_mask] = 0
-        x[positive_mask] = 1
-        return x
+        result = np.copy(x)
+        negative_mask =  result <= 0
+        positive_mask = result > 0
+        result[negative_mask] = 0
+        result[positive_mask] = 1
+        return result
 
     # Функции потерь и их градиенты
     def MSE(self, y_true, y_pred):                                  # MSE 
@@ -168,9 +170,9 @@ class MLP:
         
         return result
 
-    def test(self, y_true, y_pred):
-        representation = self.__representations[len(self.__representations)-2]     # вход последнего слоя (он же выход предпоследнего)
-        return self.__MSE_derivatiev(y_true, y_pred)
+    # def test(self, y_true, y_pred):
+    #     representation = self.__representations[len(self.__representations)-2]     # вход последнего слоя (он же выход предпоследнего)
+    #     return self.__MSE_derivatiev(y_true, y_pred)
 
     def set_loss_function(self, loss, lr=0.01):
         if loss in self.__types_loss:
@@ -193,9 +195,7 @@ class MLP:
             Loss = self.__loss_fn
             d_Loss = self.__dict_of_loss[Loss][1]                       # Получаем производную функции потерь
             representation = None
-            if self.__layers > 1:
-                # representation = self.__representations[len(self.__representations)-2]     # вход последнего слоя (он же выход предпоследнего)  
-
+            if self.__layers > 1:  
                 Grad = d_Loss(y_true, y_pred)                  # расчет градиента для функции потерь
                 for i in reversed(range(self.__layers)):
                     if i > 0:
