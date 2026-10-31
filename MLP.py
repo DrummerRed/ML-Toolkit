@@ -101,26 +101,19 @@ class MLP:
         return result
 
     def Softmax(self, x):
-        from math import e
-        result = np.copy(x)
-        samples_count = x.shape[0]                 # Получаем значение кол-ва примеров для расчета вероятности каждого из них 
-        features_count = x.shape[1]
-        denominater = 0                             # Расчет знаменателя softmax
-        for i in range(samples_count):
-            for j in range(features_count):
-                denominater += e ** x[i][j]
-            for j in range(features_count):
-                result[i][j] = e ** x[i][j] / denominater
-            denominater = 0
-        return result
+        z = np.asarray(x, dtype=float)                   
+        z = z - z.max(axis=1, keepdims=True)             
+        exp_z = np.exp(z)                                
+        return exp_z / exp_z.sum(axis=1, keepdims=True)  
 
     # Производные функций активации
     def __identity_derivatiev(self, x):
         return np.ones_like(x)
 
     def __sigmoid_derivatiev(self, x):
-        from math import e
-        result = (e ** x) / (e ** (2 * x) + 2 * (e ** x) + 1)
+        # from math import e
+        # result = (e ** x) / (e ** (2 * x) + 2 * (e ** x) + 1)
+        result = np.exp(x) / (np.exp(2 * x) + 2 * np.exp(x) + 1)
         return result
 
     def __ReLU_derivatiev(self, x):
@@ -148,8 +141,8 @@ class MLP:
         # classes_count = logits.shape[1]
         Loss = 0
         for i in range(samples_count):                              # По идее можно оптимизировать, не используя цикл
-            true_class = y_true[i][0]
-            Loss += np.log(logits[i][true_class])
+            true_class = int(y_true[i][0])
+            Loss += np.log(logits[i][true_class] + 1e-12)           # 1e-12, чтоб недопустить log(0)
         return -1 * (Loss / samples_count)
 
     def Cross_entropy_derivatiev(self, y_true, logits):
@@ -160,7 +153,7 @@ class MLP:
             # classes_count = logits.shape[1]
             one_hot_y_true = np.zeros_like(logits)
             for i in range(samples_count):                          # По идее можно оптимизировать, не используя цикл
-                true_class = y_true[i][0]
+                true_class = int(y_true[i][0])
                 one_hot_y_true[i][true_class] = 1
 
             result = (logits -  one_hot_y_true) / samples_count
